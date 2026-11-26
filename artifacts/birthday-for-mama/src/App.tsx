@@ -95,9 +95,9 @@ function App() {
               <p>Kalau ditanya apa arti rumah, mungkin jawabannya selalu Mama.</p>
             </div>
             <div className="memory-grid">
-              <article className="memory-note"><span className="note-index">01 / pagi</span><span className="memory-spark">✳</span><h3 className="note-title">Suara dari dapur</h3><p>Bunyi piring dan sapaan Mama yang pelan. Pagi biasa yang selalu terasa lebih baik.</p></article>
-              <article className="memory-note"><span className="note-index">02 / selalu</span><span className="memory-spark">✳</span><h3 className="note-title">“Sudah makan?”</h3><p>Dua kata sederhana, tapi entah bagaimana selalu berarti: Mama sayang dan ingin aku baik-baik saja.</p></article>
-              <article className="memory-note"><span className="note-index">03 / rumah</span><span className="memory-spark">✳</span><h3 className="note-title">Tempat bercerita</h3><p>Di dekat Mama, aku boleh jadi diriku sendiri. Tak perlu pura-pura kuat setiap waktu.</p></article>
+              <article className="memory-note"><span className="note-index">01 / masakan</span><span className="memory-spark">✳</span><h3 className="note-title">Masakan yang selalu Mama siapkan</h3><p>Masakan yang selalu Mama sediakan membuatku merasa dirawat, bahkan lewat hal-hal kecil setiap hari.</p></article>
+              <article className="memory-note"><span className="note-index">02 / perjalanan</span><span className="memory-spark">✳</span><h3 className="note-title">Kenangan setiap kali jalan-jalan</h3><p>Setiap kali kita jalan-jalan, kebersamaan sederhana itu selalu jadi kenangan yang kusimpan.</p></article>
+              <article className="memory-note"><span className="note-index">03 / sekolah</span><span className="memory-spark">✳</span><h3 className="note-title">Selalu membantu sampai akhir</h3><p>Walau dulu aku sering menunda tugas-tugas sekolah sampai mepet dan belum bertanggung jawab, Mama tetap membantu serta menemaniku sampai semuanya selesai.</p></article>
             </div>
           </div>
         </section>
