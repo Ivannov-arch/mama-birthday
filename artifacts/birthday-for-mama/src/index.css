@@ -204,6 +204,28 @@
 .wordmark { display: flex; align-items: center; gap: 11px; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; font-weight: 700; }
 .wordmark-mark { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid var(--rust); border-radius: 50%; color: var(--rust); font-family: var(--app-font-serif); font-size: 19px; font-style: italic; }
 .top-note { font-family: 'Kalam', cursive; color: #74836e; font-size: 15px; transform: rotate(-2deg); }
+.masthead-actions { display: flex; align-items: center; gap: 16px; }
+.music-toggle {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: rgba(251, 248, 239, .78);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  transition: border-color .25s ease, background .25s ease, transform .2s ease;
+}
+.music-toggle:hover { border-color: var(--rust); transform: translateY(-1px); }
+.music-toggle.is-playing { border-color: rgba(169, 87, 67, .45); background: rgba(251, 248, 239, .95); color: var(--rust); }
+.music-dot { width: 7px; height: 7px; border-radius: 50%; background: #8c9a84; transition: background .25s ease; }
+.music-toggle.is-playing .music-dot { background: var(--rust); animation: music-pulse 1.8s ease-in-out infinite; }
+@keyframes music-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.8); } }
 .intro {
   min-height: min(790px, calc(100dvh - 86px));
   display: grid;
@@ -327,7 +349,8 @@
 @media (max-width: 760px) {
   .page-frame { width: min(100% - 36px, 520px); }
   .masthead { height: 70px; }
-  .top-note { font-size: 13px; }
+  .top-note { display: none; }
+  .music-toggle { padding: 6px 12px; font-size: 10px; }
   .intro { min-height: auto; grid-template-columns: 1fr; gap: 5px; padding: 54px 0 42px; }
   .intro-copy { padding: 0; }
   .intro h1 { font-size: clamp(70px, 18vw, 100px); margin: 22px 0 18px; }

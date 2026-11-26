@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { birthdayMusic } from './lib/birthdayMusic';
 
 function FlowerIllustration() {
   return (
@@ -32,9 +33,32 @@ function Envelope({ opened, onOpen }: { opened: boolean; onOpen: () => void }) {
 
 function App() {
   const [opened, setOpened] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [musicInteracted, setMusicInteracted] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      birthdayMusic.stop();
+    };
+  }, []);
+
+  const toggleMusic = () => {
+    setMusicInteracted(true);
+    if (musicPlaying) {
+      birthdayMusic.stop();
+      setMusicPlaying(false);
+    } else {
+      void birthdayMusic.start();
+      setMusicPlaying(true);
+    }
+  };
 
   const openSurprise = () => {
     setOpened(true);
+    if (!musicInteracted && !musicPlaying) {
+      void birthdayMusic.start();
+      setMusicPlaying(true);
+    }
     window.setTimeout(() => {
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       document.getElementById('surat')?.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth', block: 'start' });
@@ -46,7 +70,19 @@ function App() {
       <div className="page-frame">
         <header className="masthead">
           <div className="wordmark"><span className="wordmark-mark">M</span><span>Untuk Mama</span></div>
-          <span className="top-note">dibuat dengan segenap hati</span>
+          <div className="masthead-actions">
+            <span className="top-note">dibuat dengan segenap hati</span>
+            <button
+              className={`music-toggle${musicPlaying ? ' is-playing' : ''}`}
+              type="button"
+              onClick={toggleMusic}
+              aria-pressed={musicPlaying}
+              aria-label={musicPlaying ? 'Jeda musik ulang tahun' : 'Putar musik ulang tahun'}
+            >
+              <span className="music-dot" aria-hidden="true" />
+              <span>{musicPlaying ? 'Jeda musik' : 'Putar musik'}</span>
+            </button>
+          </div>
         </header>
         <section className="intro" aria-labelledby="intro-heading">
           <div className="intro-copy">
