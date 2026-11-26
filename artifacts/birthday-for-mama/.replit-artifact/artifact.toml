@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/birthday-for-mama/"
+title = "Untuk Mama"
+description = "Halaman web interaktif untuk merayakan ulang tahun Mama, dengan intro animasi dan ucapan yang hangat."
+version = "1.0.0"
+id = "artifacts/birthday-for-mama"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/birthday-for-mama/" ]
+localPort = 22765
+
+[services.development]
+run = "pnpm --filter @workspace/birthday-for-mama run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/birthday-for-mama", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/birthday-for-mama/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22765"
+BASE_PATH = "/birthday-for-mama/"
