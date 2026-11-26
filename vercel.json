@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "pnpm install",
+  "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/birthday-for-mama build",
   "outputDirectory": "artifacts/birthday-for-mama/dist/public",
   "rewrites": [
