@@ -182,12 +182,20 @@ class CalmingBirthdayPlayer {
     }, totalMs);
   }
 
-  async start(): Promise<void> {
-    if (this.isPlaying) return;
+  async start(): Promise<boolean> {
+    if (this.isPlaying) return true;
 
     const { ctx } = this.ensureContext();
     if (ctx.state === 'suspended') {
-      await ctx.resume();
+      try {
+        await ctx.resume();
+      } catch {
+        return false;
+      }
+    }
+
+    if (ctx.state !== 'running') {
+      return false;
     }
 
     this.isPlaying = true;
@@ -199,6 +207,7 @@ class CalmingBirthdayPlayer {
     }
 
     this.scheduleLoop();
+    return true;
   }
 
   stop(): void {

@@ -33,21 +33,44 @@ function Envelope({ opened, onOpen }: { opened: boolean; onOpen: () => void }) {
 
 function App() {
   const [opened, setOpened] = useState(false);
-  const [musicPlaying, setMusicPlaying] = useState(false);
-  const [musicInteracted, setMusicInteracted] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(true);
+  const [musicManuallyPaused, setMusicManuallyPaused] = useState(false);
 
   useEffect(() => {
+    let active = true;
+
+    const tryAutoStart = async () => {
+      if (!active || musicManuallyPaused) return;
+      const started = await birthdayMusic.start();
+      if (started && active) {
+        window.removeEventListener('pointerdown', handleFirstInteraction);
+        window.removeEventListener('keydown', handleFirstInteraction);
+      }
+    };
+
+    const handleFirstInteraction = () => {
+      void tryAutoStart();
+    };
+
+    void tryAutoStart();
+    window.addEventListener('pointerdown', handleFirstInteraction, { passive: true });
+    window.addEventListener('keydown', handleFirstInteraction, { passive: true });
+
     return () => {
+      active = false;
+      window.removeEventListener('pointerdown', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
       birthdayMusic.stop();
     };
-  }, []);
+  }, [musicManuallyPaused]);
 
   const toggleMusic = () => {
-    setMusicInteracted(true);
     if (musicPlaying) {
+      setMusicManuallyPaused(true);
       birthdayMusic.stop();
       setMusicPlaying(false);
     } else {
+      setMusicManuallyPaused(false);
       void birthdayMusic.start();
       setMusicPlaying(true);
     }
@@ -55,7 +78,7 @@ function App() {
 
   const openSurprise = () => {
     setOpened(true);
-    if (!musicInteracted && !musicPlaying) {
+    if (!musicManuallyPaused) {
       void birthdayMusic.start();
       setMusicPlaying(true);
     }
