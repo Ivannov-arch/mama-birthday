@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { birthdayMusic } from './lib/birthdayMusic';
 
 function FlowerIllustration() {
@@ -34,21 +34,28 @@ function Envelope({ opened, onOpen }: { opened: boolean; onOpen: () => void }) {
 function App() {
   const [opened, setOpened] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(true);
-  const [musicManuallyPaused, setMusicManuallyPaused] = useState(false);
+  const manuallyPausedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
 
+    const cleanupListeners = () => {
+      window.removeEventListener('pointerdown', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    };
+
     const tryAutoStart = async () => {
-      if (!active || musicManuallyPaused) return;
+      if (!active || manuallyPausedRef.current) return;
       const started = await birthdayMusic.start();
       if (started && active) {
-        window.removeEventListener('pointerdown', handleFirstInteraction);
-        window.removeEventListener('keydown', handleFirstInteraction);
+        setMusicPlaying(true);
+        cleanupListeners();
       }
     };
 
-    const handleFirstInteraction = () => {
+    const handleFirstInteraction = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.music-toggle')) return;
       void tryAutoStart();
     };
 
@@ -58,29 +65,28 @@ function App() {
 
     return () => {
       active = false;
-      window.removeEventListener('pointerdown', handleFirstInteraction);
-      window.removeEventListener('keydown', handleFirstInteraction);
+      cleanupListeners();
       birthdayMusic.stop();
     };
-  }, [musicManuallyPaused]);
+  }, []);
 
   const toggleMusic = () => {
     if (musicPlaying) {
-      setMusicManuallyPaused(true);
+      manuallyPausedRef.current = true;
       birthdayMusic.stop();
       setMusicPlaying(false);
     } else {
-      setMusicManuallyPaused(false);
-      void birthdayMusic.start();
+      manuallyPausedRef.current = false;
       setMusicPlaying(true);
+      void birthdayMusic.start();
     }
   };
 
   const openSurprise = () => {
     setOpened(true);
-    if (!musicManuallyPaused) {
-      void birthdayMusic.start();
+    if (!manuallyPausedRef.current) {
       setMusicPlaying(true);
+      void birthdayMusic.start();
     }
     window.setTimeout(() => {
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

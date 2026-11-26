@@ -4,7 +4,7 @@
  */
 
 interface NoteEvent {
-  /** Midi note number */
+  /** MIDI note number */
   midi: number;
   /** Duration in beats */
   beats: number;
@@ -58,51 +58,53 @@ function midiToFreq(midi: number): number {
 class CalmingBirthdayPlayer {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private loopTimer: number | null = null;
+  private noteTimer: number | null = null;
+  private sessionId = 0;
   private isPlaying = false;
+  private isStarting = false;
 
-  private ensureContext(): { ctx: AudioContext; destination: AudioNode } {
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      this.ctx = new AudioCtx();
+  private createContext(): { ctx: AudioContext; master: GainNode } {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
 
-      const master = this.ctx.createGain();
-      master.gain.value = 0.0001;
+    const master = ctx.createGain();
+    master.gain.value = 0.0001;
 
-      // Warm felt-piano lowpass filter
-      const warmthFilter = this.ctx.createBiquadFilter();
-      warmthFilter.type = 'lowpass';
-      warmthFilter.frequency.value = 1650;
-      warmthFilter.Q.value = 0.6;
+    // Warm felt-piano lowpass filter
+    const warmthFilter = ctx.createBiquadFilter();
+    warmthFilter.type = 'lowpass';
+    warmthFilter.frequency.value = 1650;
+    warmthFilter.Q.value = 0.6;
 
-      // Gentle room echo
-      const delay = this.ctx.createDelay(1.0);
-      delay.delayTime.value = 0.28;
+    // Gentle room echo
+    const delay = ctx.createDelay(1.0);
+    delay.delayTime.value = 0.28;
 
-      const feedback = this.ctx.createGain();
-      feedback.gain.value = 0.22;
+    const feedback = ctx.createGain();
+    feedback.gain.value = 0.22;
 
-      const echoFilter = this.ctx.createBiquadFilter();
-      echoFilter.type = 'lowpass';
-      echoFilter.frequency.value = 850;
+    const echoFilter = ctx.createBiquadFilter();
+    echoFilter.type = 'lowpass';
+    echoFilter.frequency.value = 850;
 
-      const wetGain = this.ctx.createGain();
-      wetGain.gain.value = 0.26;
+    const wetGain = ctx.createGain();
+    wetGain.gain.value = 0.26;
 
-      master.connect(warmthFilter);
-      warmthFilter.connect(this.ctx.destination);
+    master.connect(warmthFilter);
+    warmthFilter.connect(ctx.destination);
 
-      warmthFilter.connect(delay);
-      delay.connect(echoFilter);
-      echoFilter.connect(feedback);
-      feedback.connect(delay);
-      echoFilter.connect(wetGain);
-      wetGain.connect(this.ctx.destination);
+    warmthFilter.connect(delay);
+    delay.connect(echoFilter);
+    echoFilter.connect(feedback);
+    feedback.connect(delay);
+    echoFilter.connect(wetGain);
+    wetGain.connect(ctx.destination);
 
-      this.masterGain = master;
-    }
-
-    return { ctx: this.ctx, destination: this.masterGain! };
+    this.ctx = ctx;
+    this.masterGain = master;
+    return { ctx, master };
   }
 
   private playMelodyNote(ctx: AudioContext, dest: AudioNode, freq: number, startTime: number, duration: number) {
@@ -138,8 +140,7 @@ class CalmingBirthdayPlayer {
     midis.forEach((midi, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      const stagger = idx * 0.035;
-      const t = startTime + stagger;
+      const t = startTime + idx * 0.035;
 
       osc.type = 'sine';
       osc.frequency.setValueAtTime(midiToFreq(midi), t);
@@ -156,79 +157,97 @@ class CalmingBirthdayPlayer {
     });
   }
 
-  private scheduleLoop() {
-    if (!this.isPlaying || !this.ctx || !this.masterGain) return;
-
-    let offset = 0.08;
-    const baseTime = this.ctx.currentTime;
-
-    for (const event of MELODY) {
-      const noteTime = baseTime + offset;
-      const duration = event.beats * BEAT_SECONDS;
-
-      this.playMelodyNote(this.ctx, this.masterGain, midiToFreq(event.midi), noteTime, duration);
-      if (event.chord) {
-        this.playChord(this.ctx, this.masterGain, event.chord, noteTime);
-      }
-
-      offset += duration;
+  private scheduleNote(index: number, session: number) {
+    if (!this.isPlaying || session !== this.sessionId || !this.ctx || !this.masterGain) {
+      return;
     }
 
-    const totalMs = (offset + LOOP_PAUSE_SECONDS) * 1000;
-    this.loopTimer = window.setTimeout(() => {
-      if (this.isPlaying) {
-        this.scheduleLoop();
-      }
-    }, totalMs);
+    const event = MELODY[index];
+    const now = this.ctx.currentTime + 0.03;
+    const duration = event.beats * BEAT_SECONDS;
+
+    this.playMelodyNote(this.ctx, this.masterGain, midiToFreq(event.midi), now, duration);
+    if (event.chord) {
+      this.playChord(this.ctx, this.masterGain, event.chord, now);
+    }
+
+    const isLast = index === MELODY.length - 1;
+    const nextIndex = isLast ? 0 : index + 1;
+    const waitMs = (duration + (isLast ? LOOP_PAUSE_SECONDS : 0)) * 1000;
+
+    this.noteTimer = window.setTimeout(() => {
+      this.scheduleNote(nextIndex, session);
+    }, waitMs);
   }
 
   async start(): Promise<boolean> {
     if (this.isPlaying) return true;
+    if (this.isStarting) return false;
 
-    const { ctx } = this.ensureContext();
-    if (ctx.state === 'suspended') {
-      try {
-        await ctx.resume();
-      } catch {
+    this.isStarting = true;
+    const session = ++this.sessionId;
+
+    try {
+      const { ctx, master } =
+        this.ctx && this.masterGain && this.ctx.state !== 'closed'
+          ? { ctx: this.ctx, master: this.masterGain }
+          : this.createContext();
+
+      if (ctx.state === 'suspended') {
+        try {
+          await ctx.resume();
+        } catch {
+          return false;
+        }
+      }
+
+      // If stop() or another start() happened while awaiting resume(), abort
+      if (session !== this.sessionId || ctx.state !== 'running') {
         return false;
       }
-    }
 
-    if (ctx.state !== 'running') {
-      return false;
-    }
-
-    this.isPlaying = true;
-    if (this.masterGain) {
+      this.isPlaying = true;
       const now = ctx.currentTime;
-      this.masterGain.gain.cancelScheduledValues(now);
-      this.masterGain.gain.setValueAtTime(Math.max(0.0001, this.masterGain.gain.value), now);
-      this.masterGain.gain.linearRampToValueAtTime(0.85, now + 0.6);
-    }
+      master.gain.cancelScheduledValues(now);
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.linearRampToValueAtTime(0.85, now + 0.6);
 
-    this.scheduleLoop();
-    return true;
+      this.scheduleNote(0, session);
+      return true;
+    } finally {
+      this.isStarting = false;
+    }
   }
 
   stop(): void {
+    this.sessionId++;
     this.isPlaying = false;
-    if (this.loopTimer !== null) {
-      window.clearTimeout(this.loopTimer);
-      this.loopTimer = null;
+    this.isStarting = false;
+
+    if (this.noteTimer !== null) {
+      window.clearTimeout(this.noteTimer);
+      this.noteTimer = null;
     }
 
-    if (this.ctx && this.masterGain) {
-      const now = this.ctx.currentTime;
-      this.masterGain.gain.cancelScheduledValues(now);
-      this.masterGain.gain.setValueAtTime(Math.max(0.0001, this.masterGain.gain.value), now);
-      this.masterGain.gain.linearRampToValueAtTime(0.0001, now + 0.35);
+    const ctx = this.ctx;
+    const master = this.masterGain;
+    this.ctx = null;
+    this.masterGain = null;
 
-      const currentCtx = this.ctx;
+    if (ctx && master && ctx.state !== 'closed') {
+      try {
+        const now = ctx.currentTime;
+        master.gain.cancelScheduledValues(now);
+        master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), now);
+        master.gain.linearRampToValueAtTime(0.0001, now + 0.2);
+      } catch {
+        // Ignore if context is already closing
+      }
       window.setTimeout(() => {
-        if (!this.isPlaying && currentCtx.state === 'running') {
-          void currentCtx.suspend();
+        if (ctx.state !== 'closed') {
+          void ctx.close().catch(() => {});
         }
-      }, 400);
+      }, 240);
     }
   }
 }
